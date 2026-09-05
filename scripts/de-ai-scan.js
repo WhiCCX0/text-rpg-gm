@@ -9,6 +9,7 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 
 const BLACKLIST = [
   // 浮夸修饰与伪文采
@@ -109,28 +110,83 @@ if (require.main === module) {
     process.exit(r1.passed === false && r2.passed === true ? 0 : 1);
   }
 
-  let textToScan = '';
-  if (args.length > 0 && fs.existsSync(args[0])) {
-    textToScan = fs.readFileSync(args[0], 'utf8');
-  } else if (args.length > 0) {
-    textToScan = args.join(' ');
-  } else {
-    console.log('用法: node scripts/de-ai-scan.js "<文本内容>" 或 node scripts/de-ai-scan.js <文件路径> 或 node scripts/de-ai-scan.js --test');
+  const target = args[0];
+  if (!target) {
+    console.log('用法: node scripts/de-ai-scan.js "<文本内容>" 或 node scripts/de-ai-scan.js <文件/目录路径> 或 node scripts/de-ai-scan.js --test');
     process.exit(1);
   }
 
-  const result = analyzeText(textToScan);
-  if (result.passed) {
-    console.log('✅ 去AI味核验通过：0 命中黑名单词库，无公文弱动词，符合冷钢骨力文风规范！');
-    if (result.warnings.length > 0) {
-      console.log('💡 风格建议:');
-      result.warnings.forEach(w => console.log('  - ' + w));
+  const scanFile = (filePath) => {
+    // 规则元契约文件本身包含黑名单词表与违规案例，跳过规则定义文件本身的自检
+    if (path.basename(filePath) === 'literary-pipeline-contract.md') {
+      console.log(`ℹ️ [跳过契约定义] ${filePath}（规则元契约规范）`);
+      return true;
     }
-    process.exit(0);
+    const content = fs.readFileSync(filePath, 'utf8');
+    const res = analyzeText(content);
+    if (!res.passed) {
+      console.error(`❌ [违规未通过] ${filePath}:`);
+      res.issues.forEach(i => console.error('   - ' + i));
+      return false;
+    } else {
+      console.log(`✅ [通过核验] ${filePath}`);
+      return true;
+    }
+  };
+
+  if (fs.existsSync(target)) {
+    const stat = fs.statSync(target);
+    if (stat.isDirectory()) {
+      console.log(`🔍 正在全量递归扫描目录: ${target} ...\n`);
+      const getFiles = (dir) => {
+        let results = [];
+        const list = fs.readdirSync(dir);
+        list.forEach(file => {
+          const fullPath = path.join(dir, file);
+          const s = fs.statSync(fullPath);
+          if (s.isDirectory()) {
+            results = results.concat(getFiles(fullPath));
+          } else if (file.endsWith('.md')) {
+            results.push(fullPath);
+          }
+        });
+        return results;
+      };
+
+      const mdFiles = getFiles(target);
+      let allPassed = true;
+      for (const f of mdFiles) {
+        if (!scanFile(f)) {
+          allPassed = false;
+        }
+      }
+      if (!allPassed) {
+        console.error('\n❌ 存在违背文学创作管线的文档，门禁拦截！');
+        process.exit(1);
+      } else {
+        console.log('\n🎉 目录下所有 Markdown 资产去AI味终审核验 100% 通过！');
+        process.exit(0);
+      }
+    } else {
+      const ok = scanFile(target);
+      process.exit(ok ? 0 : 1);
+    }
   } else {
-    console.error('❌ 发现违背文学创作管线的 AI 味或修辞问题:');
-    result.issues.forEach(i => console.error('  - ' + i));
-    process.exit(1);
+    // 纯文本传参扫描
+    const textToScan = args.join(' ');
+    const result = analyzeText(textToScan);
+    if (result.passed) {
+      console.log('✅ 去AI味核验通过：0 命中黑名单词库，无公文弱动词，符合冷钢骨力文风规范！');
+      if (result.warnings.length > 0) {
+        console.log('💡 风格建议:');
+        result.warnings.forEach(w => console.log('  - ' + w));
+      }
+      process.exit(0);
+    } else {
+      console.error('❌ 发现违背文学创作管线的 AI 味或修辞问题:');
+      result.issues.forEach(i => console.error('  - ' + i));
+      process.exit(1);
+    }
   }
 }
 
