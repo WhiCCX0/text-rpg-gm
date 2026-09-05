@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TextRPG_TruthFiles_StateSchema",
+  "description": "基于 Truth Files 标准的强类型 RPG 状态机数据模型，确保因果守恒与状态零漂移",
+  "type": "object",
+  "required": [
+    "character",
+    "status",
+    "inventory",
+    "relationships",
+    "world_state",
+    "hooks"
+  ],
+  "properties": {
+    "character": {
+      "type": "object",
+      "required": ["name", "race", "origin", "age", "disciplines"],
+      "properties": {
+        "name": { "type": "string" },
+        "race": { "type": "string" },
+        "origin": { "type": "string" },
+        "age": { "type": "integer", "minimum": 1 },
+        "gender": { "type": "string" },
+        "disciplines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "stage", "debt"],
+            "properties": {
+              "name": { "type": "string" },
+              "stage": { "type": "string" },
+              "debt": { "type": "string" }
+            }
+          }
+        },
+        "traits": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "required": ["hp_state", "wounds", "wealth", "location", "time"],
+      "properties": {
+        "hp_state": { "type": "string", "enum": ["健康", "轻伤", "重伤", "濒死", "死亡"] },
+        "wounds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["part", "description", "severity"],
+            "properties": {
+              "part": { "type": "string" },
+              "description": { "type": "string" },
+              "severity": { "type": "string", "enum": ["轻微", "中度", "重度", "残废"] }
+            }
+          }
+        },
+        "wealth": {
+          "type": "object",
+          "required": ["imperial_gold", "silver", "copper"],
+          "properties": {
+            "imperial_gold": { "type": "integer", "minimum": 0 },
+            "silver": { "type": "integer", "minimum": 0 },
+            "copper": { "type": "integer", "minimum": 0 },
+            "mana_crystals": {
+              "type": "object",
+              "properties": {
+                "low": { "type": "integer", "minimum": 0 },
+                "medium": { "type": "integer", "minimum": 0 },
+                "high": { "type": "integer", "minimum": 0 },
+                "supreme": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        },
+        "location": {
+          "type": "object",
+          "required": ["region", "spot", "tier"],
+          "properties": {
+            "region": { "type": "string" },
+            "spot": { "type": "string" },
+            "tier": { "type": "string", "enum": ["凡俗层", "文明层", "超凡层", "异界层", "诸界层"] }
+          }
+        },
+        "time": {
+          "type": "object",
+          "required": ["era", "year", "month", "time_of_day"],
+          "properties": {
+            "era": { "type": "string" },
+            "year": { "type": "integer" },
+            "month": { "type": "string" },
+            "time_of_day": { "type": "string" }
+          }
+        }
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "required": ["equipped", "carried"],
+      "properties": {
+        "equipped": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "carried": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "quantity", "condition"],
+            "properties": {
+              "name": { "type": "string" },
+              "quantity": { "type": "integer", "minimum": 1 },
+              "condition": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "relationships": {
+      "type": "object",
+      "required": ["npcs", "factions"],
+      "properties": {
+        "npcs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "attitude", "voiceprint", "known_bounds"],
+            "properties": {
+              "name": { "type": "string" },
+              "attitude": { "type": "string" },
+              "voiceprint": { "type": "string" },
+              "known_bounds": { "type": "string" }
+            }
+          }
+        },
+        "factions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "reputation"],
+            "properties": {
+              "name": { "type": "string" },
+              "reputation": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "world_state": {
+      "type": "object",
+      "required": ["evolution_tracks", "aftermaths"],
+      "properties": {
+        "evolution_tracks": {
+          "type": "object",
+          "properties": {
+            "war": { "type": "string" },
+            "succession": { "type": "string" },
+            "church_schism": { "type": "string" },
+            "academy_thesis": { "type": "string" },
+            "magic_tech": { "type": "string" },
+            "beast_migration": { "type": "string" },
+            "demon_movement": { "type": "string" },
+            "trade_route": { "type": "string" }
+          }
+        },
+        "aftermaths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "event", "due_time", "consequence"],
+            "properties": {
+              "id": { "type": "string" },
+              "event": { "type": "string" },
+              "due_time": { "type": "string" },
+              "consequence": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "hooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "state", "trigger_condition"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "state": { "type": "string", "enum": ["open", "progressing", "deferred", "resolved"] },
+          "trigger_condition": { "type": "string" }
+        }
+      }
+    }
+  }
+}
